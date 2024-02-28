@@ -1,80 +1,139 @@
 
 //importing file system
 const fs= require('fs');
-//Taking User input
-const readline = require('readline');
-//Give User options for which token he wants to check details for
-const inquirer = require('inquirer');
+const abi = require('./ERC20abi.json');
+const fetch = require('node-fetch');
+const apiUrl = 'https://api.bscscan.com/api';
+//to import contract addresses of tokens
+const { tokenContractDetailsERC20, tokenContractDetailsBEP20 } = require('./config/config.js');
 //accessing eth node
-const { Web3 } = require('web3');
-const web3 = new Web3('https://goerli.infura.io/v3/f48a4b4bec7243c49bb6cef99478e6c1');
-
-//const adrs = web3.utils.asciiToHex(address);
-//importing module from token
-const gwt=require('./wethToken');
-
+const {Web3}  = require('web3');
+const web3 = new Web3('https://eth-mainnet.g.alchemy.com/v2/EZz1To-Nb5VErAW7DW8u8_rW31X2BNmT');
 
 async function getBlockNumberFromDate(date) {
-  const targetTimestamp = Math.floor(date.getTime() / 1000);
-  const currBlock = await web3.eth.getBlock('latest');
-  const Ts1= (Number(currBlock.timestamp)-(targetTimestamp))/12;
-  const latestBlockNumber = Number(await web3.eth.getBlockNumber());
+  try {
+      const targetTimestamp = Math.floor(date.getTime() / 1000);
+      const latestBlockNumber = Number(await web3.eth.getBlockNumber());
 
-  let left = Ts1; // Starting block number
-  let right = latestBlockNumber; // Latest block number
+      let left = 0; // Starting block number
+      let right = latestBlockNumber; // Latest block number
+      let closestBlockNumber = null;
+      let closestTimestampDiff = Infinity;
 
-  while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    const block = await web3.eth.getBlock(mid);
-    if (!block) {
-      // Handle the case where block retrieval fails
+      while (left <= right) {
+          const mid = Math.floor((left + right) / 2);
+          const block = await web3.eth.getBlock(mid);
+          if (!block) {
+              // Handle the case where block retrieval fails
+              return closestBlockNumber; // Return the closest block number found
+          }
+          const blockTimestamp = Number(block.timestamp);
+          const timestampDiff = Math.abs(blockTimestamp - targetTimestamp);
+
+          if (timestampDiff < closestTimestampDiff) {
+              closestTimestampDiff = timestampDiff;
+              closestBlockNumber = mid;
+          }
+
+          if (blockTimestamp === targetTimestamp) {
+              // If exact match found, return the block number
+              return mid;
+          } else if (blockTimestamp < targetTimestamp) {
+              left = mid + 1;
+          } else {
+              right = mid - 1;
+          }
+      }
+
+      return closestBlockNumber; // Return the closest block number found
+  } catch (error) {
+      console.error('Error fetching block number from date:', error);
       return null;
-    }
-    const blockTimestamp = Number(block.timestamp);
-
-    if (blockTimestamp === targetTimestamp) {
-      return mid;
-    } else if (blockTimestamp < targetTimestamp) {
-      left = mid + 1;
-    } else {
-      right = mid - 1;
-    }
   }
+}
+async function fetchBEPTransactionList(adrs, fromBlock, toBlock, page = 1, offset = 0) {
+    
+  try {
+  
+      const queryParams = new URLSearchParams({
+          module: 'account',
+          action: 'txlist',
+          contractaddress: tokenContractDetailsBEP20.DOT,//change accordingly
+          address: adrs,
+          startblock: fromBlock,
+          endblock: toBlock,
+          page: page,
+          offset: offset,
+          sort: 'asc',
+          apikey: 'BG58KQHTCHU62P3PCGAW2GEATY5QPC8M2S' 
+      });
 
-  // If the loop completes without finding the block, return null or handle appropriately
-  return null;
+      // Construct the full URL
+      const fullUrl = `${apiUrl}?${queryParams}`;
+
+      // Fetch transaction list
+      const response = await fetch(fullUrl);
+      const data = await response.json();
+      
+      console.log(data); 
+  } catch (error) {
+      console.error('Error fetching transaction list:', error);
+  }
 }
 
-
+async function getERCTokenTransactions(Adrs) {
   
+  const ContractAddress = tokenContractDetailsERC20.DAI; //change accordingly
+  const contract = new web3.eth.Contract(abi, ContractAddress);
+      let startBlock = new Date(2024,1,27,23,0,0);//change accordingly
+      let endBlock = new Date(2024,1,27,23,50,0);//change accordingly
+      let sBlock=await getBlockNumberFromDate(startBlock);
+      let eBlock=await getBlockNumberFromDate(endBlock);
+      let givenAddress=Adrs;
+      for (let i = sBlock; i <= eBlock; i++) {
+          // Fetch logs for Transfer events for the current block
+          const logs = await contract.getPastEvents('Transfer', {
+              filter: {},
+              fromBlock: i,
+              toBlock: i
+          });
+  
+           //Print transfer events for the current block
+         for (const log of logs) {
+          if(log.returnValues.from === givenAddress || log.returnValues.to === givenAddress){
+              console.log('Block Number:', log.blockNumber);
+              console.log('Transaction Hash:', log.transactionHash);
+              console.log('From:', log.returnValues.from);
+              console.log('To:', log.returnValues.to);
+              console.log('Transaction Value:', log.returnValues.value);
+              console.log('--------------------------------------');
+          }}
+      }
+  } 
 
 
 
-async function GetTx(adrs,date1,date2) {
+async function getTx(adrs) {
     const transactions=[];
-    //let block1 =await web3.eth.getBlock('latest');
-    //let date1 = new Date(2024,1,22,10,0,0);//currblock>oldblock
-    //let date2 = new Date(2024,1,21,22,0,0);
-    let currblock=await getBlockNumberFromDate(date1);
-    let oldblock=await getBlockNumberFromDate(date2);
+    
+    let date1 = new Date(2024,1,22,10,0,0);//change accordingly
+    let date2 = new Date(2024,1,21,22,0,0);//change accordingly
+    let toblock=await getBlockNumberFromDate(date1);
+    let fromblock=await getBlockNumberFromDate(date2);
   
-    //let currblock=Number(block1.number);
-    //let oldblock= Number(currblock-Math.ceil((2 * 60 * 60) / 12));
-
-    // Check if currblock or oldblock is null
-    if (currblock === null || oldblock === null) {
+    if (toblock === null || fromblock === null) {
       console.error("Error: Unable to retrieve block numbers.");
       return;
     }
     
-    for(let i=oldblock;i <= currblock; i++){
+    for(let i=fromblock;i <= toblock; i++){
         var block =await web3.eth.getBlock(i,true);
-        //check if Tx exist in the block
+        
         if(block && block.transactions){
         block.transactions.forEach((tx)=>{
-            //console.log({From:tx.from,to:tx.to});
+            
             if(tx.from === adrs.toLowerCase() || tx.to === adrs.toLowerCase()){
-              //console.log({from: tx.from, to:tx.to, amount: web3.utils.fromWei(tx.value,'ether'),TransactionHash: tx.hash});
+
                 transactions.push({from: tx.from, to:tx.to, amount: web3.utils.fromWei(tx.value,'ether'),TransactionHash: tx.hash});
 
             }
@@ -86,7 +145,7 @@ async function GetTx(adrs,date1,date2) {
    
       
         fs.writeFile('Output.txt',JSON.stringify(transactions) , err=>{
-          //Added JSON.stringify() when writing transactions to the file to convert the array of objects into a string.
+          
           if(err){
         console.err; 
         return; 
@@ -98,72 +157,16 @@ async function GetTx(adrs,date1,date2) {
           }
         });
   }
+//test
+//const adrs='';
+  //getTx(adrs) ;
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
+  //for ERC20 tokens
+  //getERCTokenTransactions(adrs);
+
+  //for BEP20 tokens
+  //const fromBlock = await getBlockNumberFromDate();
+  //const toBlock = await getBlockNumberFromDate();
+  //fetchBEPTransactionList(adrs, fromBlock, toBlock);
 
 
-// Define your Inquirer prompt
-const questions = [{
-  type: 'list',
-  name: 'token',
-  message: 'Which token do you want to check transactions for?',
-  choices: ['Ether', 'Wrapped Ether']
-}];
-
-// Perform Inquirer prompt
-inquirer.prompt(questions)
-  .then((answers) => {
-      if (answers.token === 'Ether') {
-          // Prompt for Ether token
-          inquirer.prompt([
-              {
-                  type: 'input',
-                  name: 'address',
-                  message: 'Enter the address for which you want transaction details (from & to addresses):',
-              },
-              {
-                  type: 'input',
-                  name: 'date1',
-                  message: 'Enter the more recent date of the interval in which you want to check the transactions (Format: YYYY-MM-DD HH:MM:SS):',
-              },
-              {
-                  type: 'input',
-                  name: 'date2',
-                  message: 'Enter the later date of the interval in which you want to check the transactions (Format: YYYY-MM-DD HH:MM:SS):',
-              },
-          ])
-          .then((answers) => {
-              // Parse dates
-              const parsedDate1 = new Date(answers.date1);
-              const parsedDate2 = new Date(answers.date2);
-  
-              // Call GetTx function with user input
-              GetTx(answers.address, parsedDate1, parsedDate2);
-          });
-      } else if (answers.token === 'Wrapped Ether') {
-          // Prompt for Wrapped Ether token
-          inquirer.prompt([
-              {
-                  type: 'input',
-                  name: 'date1',
-                  message: 'Enter the more recent date of the interval in which you want to check the transactions (Format: YYYY-MM-DD HH:MM:SS):',
-              },
-              {
-                  type: 'input',
-                  name: 'date2',
-                  message: 'Enter the later date of the interval in which you want to check the transactions (Format: YYYY-MM-DD HH:MM:SS):',
-              },
-          ])
-          .then((answers) => {
-              // Parse dates
-              const parsedDate1 = new Date(answers.date1);
-              const parsedDate2 = new Date(answers.date2);
-  
-              // Call the function for Wrapped Ether transactions with user input
-              gwt.getWethTransactions(parsedDate2, parsedDate1);
-          });
-      }
-  });
