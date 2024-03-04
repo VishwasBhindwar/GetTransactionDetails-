@@ -9,8 +9,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "async-retry": "^1.3.3",
     "ethereum-block-by-date": "^1.4.9",
     "inquirer": "^8.0.0",
-    "web3": "^4.5.0"
+    "web3": "^4.5.0",
+    "ws": "^8.16.0"
   }
 }
