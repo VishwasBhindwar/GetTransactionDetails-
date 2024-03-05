@@ -2,7 +2,7 @@
 
 const gbt= require('./Tokens/bep20.js');
 const gerct=require('./Tokens/erc20.js');
-const geteth=require('./Tokens/eth.js');
+const geteth=require('./Tokens/ether.js');
 
 
 //test
