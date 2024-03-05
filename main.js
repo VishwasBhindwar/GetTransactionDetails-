@@ -1,7 +1,8 @@
 
-const gbt= require('./getBep.js');
-const gerct=require('./getERC.js');
-const geteth=require('./gEth.js');
+
+const gbt= require('./Tokens/Bep20.js');
+const gerct=require('./Tokens/Erc20.js');
+const geteth=require('./Tokens/Eth.js');
 
 
 //test
