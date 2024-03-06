@@ -1,6 +1,7 @@
 
+require('dotenv').config();
 const {Web3}  = require('web3');
-const web3 = new Web3('https://eth-mainnet.g.alchemy.com/v2/EZz1To-Nb5VErAW7DW8u8_rW31X2BNmT');
+const web3 = new Web3(`https://eth-mainnet.g.alchemy.com/v2/${process.env.ERC_TOKEN_API_KEY}`);
 const fs= require('fs');
 const {tokenContractDetailsERC20,ercAbi } = require('../config/config.js');
 
