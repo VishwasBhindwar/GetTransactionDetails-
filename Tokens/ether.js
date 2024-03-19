@@ -1,7 +1,7 @@
 
 require('dotenv').config();
 const {Web3}  = require('web3');
-const web3 = new Web3(`https://eth-mainnet.nodereal.io/v1/${process.env.ETH_API_KEY}`);
+const web3 = new Web3(`${process.env.ETH_RPC_URL}`);
 const fs= require('fs');
 
 async function getBlockNumberFromDate(date) {

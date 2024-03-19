@@ -1,7 +1,7 @@
 
 require('dotenv').config();
 const {Web3}  = require('web3');
-const web3 = new Web3(`https://bsc-mainnet.nodereal.io/v1/${process.env.BEPTOKEN_API_KEY}`);
+const web3 = new Web3(`${process.env.BEPTOKEN_RPC_URL}`);
 const fs= require('fs');
 const {tokenContractDetailsBEP20,bepAbi } = require('../config/config.js');
 
